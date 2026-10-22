@@ -1,0 +1,77 @@
+# 本番(Neon)へのマイグレーション。手動実行のみ。
+# 実行するには、入力 confirm に「migrate」と入れる(誤操作の防止)。
+# Environment「production」にレビュー必須の保護ルールを付けると、承認されるまで開始しない。
+name: migrate
+
+on:
+  workflow_dispatch:
+    inputs:
+      confirm:
+        description: "実行するには「migrate」と入力する"
+        required: true
+        type: string
+
+permissions:
+  contents: read
+
+concurrency:
+  group: migrate-production
+  cancel-in-progress: false
+
+jobs:
+  migrate:
+    if: ${{ inputs.confirm == 'migrate' }}
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    environment: production
+    defaults:
+      run:
+        working-directory: api
+    env:
+      DATABASE_URL: ${{ secrets.NEON_DATABASE_URL }}
+    steps:
+      - uses: actions/checkout@v7 # v7.0.1。要ピン留め(docs/deploy.md の「GitHub Actions のワークフロー」)
+      - uses: oven-sh/setup-bun@0c5077e51419868618aeaa5fe8019c62421857d6 # v2.2.0
+      - run: bun install --frozen-lockfile
+
+      - name: 接続文字列を検査する(direct であること)
+        run: |
+          if [ -z "$DATABASE_URL" ]; then
+            echo "エラー: NEON_DATABASE_URL が設定されていません" >&2
+            exit 1
+          fi
+          # ホスト名だけを取り出す(接続文字列そのものは出力しない)
+          host="${DATABASE_URL#*://}"
+          host="${host##*@}"
+          host="${host%%[/:?]*}"
+          case "$host" in
+            *-pooler*)
+              echo "エラー: pooled 接続(ホスト名に -pooler を含む)です。direct 接続の文字列を NEON_DATABASE_URL に登録してください" >&2
+              exit 1
+              ;;
+          esac
+          echo "direct 接続であることを確認しました"
+
+      - name: マイグレーションの状況(実行前)
+        run: |
+          command -v psql >/dev/null || { sudo apt-get update -qq && sudo apt-get install -y -qq postgresql-client; }
+          # drizzle v1 は api/drizzle/<日時_名前>/ のディレクトリ 1 つが 1 マイグレーション
+          total="$(find drizzle -mindepth 1 -maxdepth 1 -type d | wc -l | tr -d ' ')"
+          # 初回(記録テーブルがまだ無い)は 0 件とみなす
+          exists="$(psql "$DATABASE_URL" -v ON_ERROR_STOP=1 -At -c "select to_regclass('drizzle.__drizzle_migrations') is not null")"
+          applied=0
+          if [ "$exists" = "t" ]; then
+            applied="$(psql "$DATABASE_URL" -v ON_ERROR_STOP=1 -At -c "select count(*) from drizzle.__drizzle_migrations")"
+          fi
+          echo "リポジトリのマイグレーション: ${total} 件 / 適用済み: ${applied} 件 / 未適用の見込み: $((total - applied)) 件"
+          echo "--- リポジトリのマイグレーション ---"
+          find drizzle -mindepth 1 -maxdepth 1 -type d -exec basename {} \; | sort
+
+      - name: マイグレーションを適用する
+        run: bun run db:migrate
+
+      - name: マイグレーションの状況(実行後)
+        run: |
+          applied="$(psql "$DATABASE_URL" -v ON_ERROR_STOP=1 -At -c \
+            "select count(*) from drizzle.__drizzle_migrations")"
+          echo "適用済み: ${applied} 件"

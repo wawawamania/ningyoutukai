@@ -1,0 +1,8 @@
+# ダンプにはユーザーのメールアドレス等が含まれるため、コミットしない
+infra/dumps/
+*.dump
+infra/.env
+
+# Cloudflare Workers(wrangler dev)のローカル用の値と作業ファイル
+api/.dev.vars
+api/.wrangler/

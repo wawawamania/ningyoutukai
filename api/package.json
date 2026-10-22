@@ -1,9 +1,16 @@
 {
   "name": "api",
   "version": "1.0.50",
+  "engines": {
+    "node": ">=24.22.1 <25"
+  },
   "scripts": {
-    "test": "echo \"Error: no test specified\" && exit 1",
-    "dev": "bun run --watch src/index.ts"
+    "test": "bun test",
+    "dev": "bun run --watch src/index.ts",
+    "dev:worker": "wrangler dev",
+    "db:generate": "drizzle-kit generate",
+    "db:migrate": "drizzle-kit migrate",
+    "deploy": "wrangler deploy"
   },
   "dependencies": {
     "@elysiajs/cors": "^1.4.2",
@@ -18,7 +25,8 @@
     "@types/pg": "^8.23.1",
     "bun-types": "latest",
     "drizzle-kit": "^1.0.0-rc.4",
-    "tsx": "^4.23.15"
+    "tsx": "^4.23.15",
+    "wrangler": "^4.151.3"
   },
   "module": "src/index.js"
 }

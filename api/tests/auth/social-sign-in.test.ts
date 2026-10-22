@@ -63,9 +63,7 @@ function track(url: string) {
 
 afterAll(async () => {
   await cleanup();
-  const { db } = await import("../../src/db");
-  // pg コネクションを閉じてテストプロセスが残らないようにする
-  await (db as any).$client?.end?.();
+  // DB プールは他のテストファイルと共有されるため、ここでは閉じない
 });
 
 describe("POST /api/auth/sign-in/social", () => {

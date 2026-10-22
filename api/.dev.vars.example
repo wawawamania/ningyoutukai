@@ -1,0 +1,15 @@
+# `wrangler dev`(ローカルの Workers)用の環境変数。コピーして `.dev.vars` にして使う(`.dev.vars` はコミットしない)。
+# 本番のシークレットは入れない。外部(GitHub / Google / Resend)につなぐ値は、空のままで良い。
+# wrangler.jsonc に hyperdrive があるので、worker.ts は DATABASE_URL ではなくそちらを使う。
+# ローカルの接続先は wrangler.jsonc の localConnectionString(既定は dev 用コンテナの DB)。
+# 変えるときは CLOUDFLARE_HYPERDRIVE_LOCAL_CONNECTION_STRING_HYPERDRIVE を環境変数で渡す。
+DATABASE_URL=postgres://postgres:postgres@localhost:5434/ningyoutukai
+BETTER_AUTH_SECRET=dummy-secret-dummy-secret-dummy-secret
+BETTER_AUTH_URL=http://localhost:8787
+WEB_ORIGIN=http://localhost:3000
+# GITHUB_CLIENT_ID=
+# GITHUB_CLIENT_SECRET=
+# GOOGLE_CLIENT_ID=
+# GOOGLE_CLIENT_SECRET=
+# RESEND_API_KEY=
+# MAIL_FROM=

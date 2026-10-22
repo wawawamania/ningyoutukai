@@ -9,6 +9,7 @@
 | **GET** `/api/auth/callback/google` | Google認証 | Googleからの認証結果を受け取る |
 | **GET** `/api/auth/get-session` | ログイン状態取得 | 現在ログインしているユーザーの情報を取得する |
 | **POST** `/api/auth/sign-out` | ログアウト | ログイン中のユーザーのセッションを終了する |
+| **GET** `/api/calendar/status` | Googleカレンダー連携状態 | ログイン中のユーザーがカレンダー権限を許可済みか取得する |
 
 ## プロダクト作成
 
@@ -37,11 +38,11 @@
 
 | メソッド・エンドポイント | 名称 | 説明 |
 | --- | --- | --- |
-| **POST** `/api/product/{productId}/task` | タスクを追加 | タイトル、説明、期限、種類、担当者、公開設定を指定してタスクを作成する |
+| **POST** `/api/product/{productId}/task` | タスクを追加 | タイトル、説明、期限日時、種類、担当者、公開設定を指定してタスクを作成する。担当者がカレンダー連携済みの場合、その人のGoogleカレンダーへ開始・終了を期限時刻にそろえた予定を追加する |
 | **GET** `/api/product/{productId}/task` | タスク一覧取得 | 指定したプロダクト内の閲覧可能なタスク一覧を取得する |
 | **GET** `/api/product/{productId}/task/{taskId}` | 指定したタスクを取得 | 指定したタスクの詳細情報を取得する |
 | **GET** `/api/product/{productId}/member/{memberId}/task` | 指定したメンバーのタスクを取得 | 指定したメンバーに割り振られているタスクの一覧を取得する |
-| **PATCH** `/api/product/{productId}/task/{taskId}` | タスク情報変更 | タスクのタイトル、説明、期限、担当者、公開設定などを変更する |
+| **PATCH** `/api/product/{productId}/task/{taskId}` | タスク情報変更 | タスクのタイトル、説明、期限、公開設定などを変更する |
 | **POST** `/api/product/{productId}/task/{taskId}/complete-report` | タスク完了報告 | 担当メンバーがリーダーに完了を報告する。Resend APIを使用してメール通知する |
 | **PATCH** `/api/product/{productId}/task/{taskId}/complete` | タスク完了確定 | プロダクトリーダーが確認後、タスクを完了状態に変更する |
 
@@ -67,4 +68,4 @@
 
 | メソッド・エンドポイント | 名称 | 説明 |
 | --- | --- | --- |
-| **GET** `/api/product/{productId}/tree` | プロダクト構造取得 | リーダー、メンバー、割り振られたタスク、タスク種類をツリー表示用のデータとして取得する |
+| **GET** `/api/product/{productId}/tree` | プロダクト構造取得 | リーダー、メンバー、割り振られたタスク、タスク種類をツリー表示用のデータとして取得する。呼び出したユーザー自身の `viewerProductMemberId` も返す |

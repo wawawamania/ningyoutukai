@@ -1,0 +1,74 @@
+# CI: 型検査・テスト・ビルド。秘密は使わない(フォークからのプルリクエストでも安全に動く)。
+name: ci
+
+on:
+  pull_request:
+    branches: [dev, main]
+  push:
+    branches: [dev]
+
+permissions:
+  contents: read
+
+# 同じブランチ / PR で新しい実行が始まったら、古い実行をキャンセルする
+concurrency:
+  group: ci-${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  api:
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    defaults:
+      run:
+        working-directory: api
+    env:
+      # CI 専用の使い捨て DB(サービスコンテナ)。本物の秘密ではない。DB 名は _test で終わらせる(テストの安全装置: tests/setup.ts)
+      DATABASE_URL: postgres://postgres:postgres@localhost:5432/ningyoutukai_test
+      BETTER_AUTH_SECRET: ci-dummy-secret
+      # GitHub / Google の OAuth 用のダミー値、BETTER_AUTH_URL、WEB_ORIGIN は api/tests/setup.ts が設定する。
+      # RESEND_API_KEY は設定しない(メールは送らず、ログだけ出す)。
+    services:
+      postgres:
+        image: postgres:18 # 本番の Neon(18)に合わせる。開発の docker compose も 18
+        env:
+          POSTGRES_USER: postgres
+          POSTGRES_PASSWORD: postgres
+          POSTGRES_DB: ningyoutukai_test
+        ports:
+          - 5432:5432
+        options: >-
+          --health-cmd "pg_isready -U postgres -d ningyoutukai_test"
+          --health-interval 5s
+          --health-timeout 5s
+          --health-retries 10
+    steps:
+      - uses: actions/checkout@v7 # v7.0.1。要ピン留め(docs/deploy.md の「GitHub Actions のワークフロー」)
+      - uses: oven-sh/setup-bun@0c5077e51419868618aeaa5fe8019c62421857d6 # v2.2.0
+      - run: bun install --frozen-lockfile
+      - run: npx tsc --noEmit
+      - name: マイグレーションを適用する
+        run: bunx drizzle-kit migrate
+      - name: テスト
+        run: bun test
+
+  web:
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    defaults:
+      run:
+        working-directory: web
+    steps:
+      - uses: actions/checkout@v7 # v7.0.1。要ピン留め(docs/deploy.md の「GitHub Actions のワークフロー」)
+      - uses: actions/setup-node@v7 # v7.1.0。要ピン留め
+        with:
+          # メジャーは .nvmrc(24)で固定する。lts/* だと、LTS が更新されたときに、メジャーが勝手に上がる。
+          # check-latest: ランナーのキャッシュが古くても、24 系の最新のパッチ(セキュリティ修正)を取る
+          node-version-file: .nvmrc
+          check-latest: true
+          cache: npm
+          cache-dependency-path: web/package-lock.json
+      - run: npm ci
+      - run: npx tsc --noEmit
+      # VITE_API_URL は web/.env.production(空 = 同一オリジン)に任せる
+      - run: npm run build

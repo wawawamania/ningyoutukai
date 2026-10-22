@@ -1,0 +1,41 @@
+# 本番(Neon)のバックアップ: pg_dump -> R2 へ保存。毎日 1 回(日本時間 3:17)と、手動実行。
+# ダンプにはユーザーのメールアドレス等が入る。GitHub のアーティファクトには残さない
+# (backup.sh は一時ディレクトリに作り、保存後に削除する)。失敗は GitHub の既定の通知に任せる。
+name: backup
+
+on:
+  schedule:
+    - cron: "17 18 * * *" # UTC 18:17 = 日本時間 3:17
+  workflow_dispatch:
+    inputs:
+      prune:
+        description: "古いダンプを削除する(保持日数を過ぎたもの。最低 3 件は残す)"
+        type: boolean
+        default: false
+
+permissions:
+  contents: read
+
+concurrency:
+  group: backup
+  cancel-in-progress: false
+
+jobs:
+  backup:
+    runs-on: ubuntu-latest
+    timeout-minutes: 30
+    steps:
+      - uses: actions/checkout@v7 # v7.0.1。要ピン留め(docs/deploy.md の「GitHub Actions のワークフロー」)
+      - name: ダンプを取って R2 に保存する
+        run: infra/scripts/backup.sh
+        env:
+          DATABASE_URL: ${{ secrets.NEON_DATABASE_URL }}
+          # ランナーの pg_dump は 16。Neon は 18 なので、postgres:18 の docker で実行する
+          USE_DOCKER: "1"
+          PG_IMAGE: postgres:18
+          R2_ACCOUNT_ID: ${{ secrets.R2_ACCOUNT_ID }}
+          R2_BUCKET: ${{ secrets.R2_BUCKET }}
+          R2_ACCESS_KEY_ID: ${{ secrets.R2_ACCESS_KEY_ID }}
+          R2_SECRET_ACCESS_KEY: ${{ secrets.R2_SECRET_ACCESS_KEY }}
+          # 手動実行で prune を選んだときだけ削除する(定期実行は対象の表示のみ)
+          PRUNE: ${{ inputs.prune && '1' || '0' }}

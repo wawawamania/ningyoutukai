@@ -1,0 +1,32 @@
+{
+  "$schema": "node_modules/wrangler/config-schema.json",
+  "name": "ningyoutukai-api",
+  "main": "src/worker.ts",
+  "compatibility_date": "2025-09-02",
+  "compatibility_flags": ["nodejs_compat"],
+
+  // 秘密でない値だけをここに書く。秘密(DATABASE_URL は使わない。BETTER_AUTH_SECRET、
+  // GITHUB_* / GOOGLE_*、RESEND_API_KEY)は `wrangler secret put` で入れる(docs/deploy.md)。
+  // デプロイ先の URL に合わせて、デプロイ前に書き換えること。
+  "vars": {
+    // 案 S(同一オリジン): web の URL。OAuth のコールバックは <BETTER_AUTH_URL>/api/auth/callback/<provider>
+    // になるので、BETTER_AUTH_URL も web の URL にする。
+    // 案 D(カスタムドメイン): BETTER_AUTH_URL = https://api.example.com、WEB_ORIGIN = https://app.example.com、
+    // さらに COOKIE_DOMAIN = .example.com を足す。
+    "BETTER_AUTH_URL": "https://ningyoutukai-web.kosame-project.workers.dev",
+    "WEB_ORIGIN": "https://ningyoutukai-web.kosame-project.workers.dev",
+    "MAIL_FROM": "人形使い <noreply@mail.maars.dev>"
+  },
+
+  // Neon への接続は Hyperdrive 経由。id は `wrangler hyperdrive create` が出力する値に置き換える。
+  // ローカルの `wrangler dev` では id は使われず、localConnectionString(dev 用コンテナの既定の値。秘密ではない)
+  // に向く。別の DB を使うときは、環境変数 CLOUDFLARE_HYPERDRIVE_LOCAL_CONNECTION_STRING_HYPERDRIVE で上書きする
+  // (デプロイでは localConnectionString は無視される)。
+  "hyperdrive": [
+    {
+      "binding": "HYPERDRIVE",
+      "id": "988ccd0f0a7f4fba90c4fbdcf6f68797",
+      "localConnectionString": "postgres://postgres:postgres@localhost:5434/ningyoutukai"
+    }
+  ]
+}

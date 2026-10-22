@@ -1,20 +1,57 @@
+# ローカル開発用の Postgres(v2.0 の dev 用コンテナ)。
+#
+#   docker compose up -d --wait     # 起動(db と mailpit)(api ディレクトリで)
+#   docker compose down             # 停止(データは残る)。データも消すなら `down -v`
+#
+# - 本番(Neon)と同じ Postgres 18。ポートは 5434(ホスト側)。
+# - 初回起動時(空のボリューム)に、開発用 DB `ningyoutukai` と、テスト用 DB `ningyoutukai_test` を作る
+#   (テスト用 DB は docker/initdb/ の SQL で作る)。
+# - プロジェクト名・コンテナ名・ボリューム・ポートは、旧 v1 の開発用コンテナ(`api-db-1`、postgres:17、
+#   ポート 5433、ボリューム `api_pgdata`)と重ならないように固定している。旧コンテナには触れない。
+#   旧データの引っ越しは infra/scripts/dev-db-migrate.sh(README.md の「旧コンテナからの引っ越し」)。
+name: ningyoutukai-dev
+
 services:
   db:
-    image: postgres:17
+    image: postgres:18
+    container_name: ningyoutukai-dev-db
     restart: unless-stopped
     environment:
+      # ローカル専用の既定値(秘密ではない)
       POSTGRES_USER: postgres
       POSTGRES_PASSWORD: postgres
       POSTGRES_DB: ningyoutukai
     ports:
-      - "5433:5432"
+      - "5434:5432"
     volumes:
-      - pgdata:/var/lib/postgresql/data
+      # Postgres 18 のイメージは、データの置き場所が /var/lib/postgresql/<メジャー版>/docker になった。
+      # そのため、マウントするのは /var/lib/postgresql(17 までの /var/lib/postgresql/data ではない)
+      - pgdata:/var/lib/postgresql
+      # 初回起動時だけ実行される(ボリュームが空のとき)
+      - ./docker/initdb:/docker-entrypoint-initdb.d:ro
     healthcheck:
       test: ["CMD-SHELL", "pg_isready -U postgres -d ningyoutukai"]
       interval: 5s
       timeout: 5s
       retries: 10
 
+  # ローカルのメール受信箱。api が送るメールを、外へは出さずにここで受けて、画面で見られる。
+  # api は HTTP の送信 API(POST /api/v1/send)で送る(SMTP は使わない)。メールは消えてよいので永続化しない。
+  #   画面と API: http://localhost:8025 / SMTP(使わないが開いている): localhost:1025
+  mailpit:
+    image: axllent/mailpit:v1.31.6
+    container_name: ningyoutukai-dev-mailpit
+    restart: unless-stopped
+    ports:
+      - "1025:1025"
+      - "8025:8025"
+    healthcheck:
+      test: ["CMD", "/mailpit", "readyz"]
+      interval: 5s
+      timeout: 5s
+      retries: 10
+
 volumes:
   pgdata:
+    # プロジェクト名の接頭辞に頼らず、名前を固定する(旧 `api_pgdata` と区別する)
+    name: ningyoutukai_dev_pgdata

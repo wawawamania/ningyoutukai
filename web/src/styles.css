@@ -1,5 +1,42 @@
-
 @import "tailwindcss";
+
+/*
+ * デザイントークン(Figma「人形使い」の、ライト / ダークの色の見本から)
+ * - ライト: 背景 #fffbe9、文字 #1c1a14
+ * - ダーク: 背景 #1b1f2a、文字 #ebebeb
+ * ダーク / ライトは、OS の設定に追従する(手動の切り替えは未定)。
+ */
+@theme {
+  --color-surface: #fffbe9;
+  --color-ink: #1c1a14;
+  /* 主役のボタン(GitHub)の背景。ライトでは濃紺、ダークでは文字色 */
+  --color-primary: #1b1f2a;
+  --color-on-primary: #ffffff;
+  /* 副のボタン(Google)の背景と枠・文字 */
+  --color-secondary: #ffffff;
+  --color-outline: #000000;
+  /* サイドバーの背景と、項目のマウスオーバー・選択中の背景(Figma `side-light` / `side-dark`) */
+  --color-side: #edebe4;
+  --color-side-item: #e2dfd4;
+  --font-sans: Inter, "Hiragino Sans", "Hiragino Kaku Gothic ProN", "Yu Gothic",
+    Meiryo, system-ui, sans-serif;
+  /* 開発者向けの画面(ターミナル風)用の等幅フォント */
+  --font-mono: "JetBrains Mono", "SF Mono", ui-monospace, Menlo, Consolas,
+    "Hiragino Sans", "Yu Gothic", monospace;
+}
+
+@media (prefers-color-scheme: dark) {
+  :root {
+    --color-surface: #1b1f2a;
+    --color-ink: #ebebeb;
+    --color-primary: #ebebeb;
+    --color-on-primary: #1b1f2a;
+    --color-secondary: #1b1f2a;
+    --color-outline: #ebebeb;
+    --color-side: #0e1015;
+    --color-side-item: #2a2e39;
+  }
+}
 
 * {
   box-sizing: border-box;
@@ -13,5 +50,38 @@ body,
 
 body {
   margin: 0;
+  background-color: var(--color-surface);
+  color: var(--color-ink);
+  font-family: var(--font-sans);
 }
 
+/* ログイン画面の背景: 点のグリッド(方眼紙のような、開発者向けの雰囲気) */
+.dot-grid {
+  background-image: radial-gradient(
+    color-mix(in srgb, var(--color-ink) 16%, transparent) 1px,
+    transparent 1px
+  );
+  background-size: 24px 24px;
+}
+
+/* ターミナルのカーソル: 点滅する(動きを減らす設定のときは、点灯のまま) */
+@keyframes blink {
+  0%,
+  49% {
+    opacity: 1;
+  }
+  50%,
+  100% {
+    opacity: 0;
+  }
+}
+
+.cursor {
+  animation: blink 1.1s steps(1) infinite;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .cursor {
+    animation: none;
+  }
+}

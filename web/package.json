@@ -2,6 +2,9 @@
   "name": "web",
   "private": true,
   "type": "module",
+  "engines": {
+    "node": ">=24.22.1 <25"
+  },
   "imports": {
     "#/*": "./src/*"
   },
@@ -9,6 +12,7 @@
     "dev": "vite dev --port 3000",
     "generate-routes": "tsr generate",
     "build": "vite build",
+    "test": "bun test",
     "preview": "vite preview",
     "deploy": "npm run build && wrangler deploy"
   },
